@@ -1,7 +1,6 @@
 package gtclient
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"time"
@@ -16,22 +15,6 @@ import (
 
 var l = logging.MustGetLogger("client")
 
-func ensureServer(addr string) bool {
-	lp, err := net.Dial("tcp", addr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, `
- Local server not running. If your server is,
- running on some other port. Please mention it,
- in the options.
-
-`)
-		return false
-	}
-
-	lp.Close()
-	return true
-}
-
 func setupHeartbeat(c net.Conn) {
 
 	for {
@@ -43,12 +26,11 @@ func setupHeartbeat(c net.Conn) {
 			l.Infof("Couldn't connect to server. Check your network connection, and run client again.")
 			os.Exit(1)
 		}
-		//l.Debugf("ping")
 	}
 }
 
 // connect to server:
-// - send the requested subdomain to server.
+// - send the requested sub domain to server.
 // - server replies back with a port to setup command channel on.
 // - it also replies with the server address that users can access the site on.
 func setupCommandChannel(addr, sub string, req, quit chan bool, conn, serverInfo chan string) {
@@ -91,8 +73,6 @@ func SetupClient(port, remote, subDomain string, serverInfo chan string) bool {
 	go setupCommandChannel(remote, subDomain, req, quit, conn, serverInfo)
 
 	remoteProxy := <-conn
-
-	// l.Infof("remote proxy: %v", remoteProxy)
 
 	for {
 		select {

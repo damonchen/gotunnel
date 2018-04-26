@@ -81,14 +81,14 @@ func main() {
 		go hs.NewSimpleHTTPServer(*port, dir)
 	}
 
-	servInfo := make(chan string)
+	serverInfo := make(chan string)
 
 	go func() {
-		servedAt := <-servInfo
+		servedAt := <-serverInfo
 		fmt.Printf("Your site should be available at: \033[1;34m%s\033[0m\n", servedAt)
 	}()
 
-	if !gtclient.SetupClient(*port, *remote, *subDomain, servInfo) {
+	if !gtclient.SetupClient(*port, *remote, *subDomain, serverInfo) {
 		flag.Usage()
 		os.Exit(1)
 	} else {
