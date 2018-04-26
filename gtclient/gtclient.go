@@ -8,10 +8,13 @@ import (
 )
 
 import (
-	l "github.com/ciju/gotunnel/log"
+	//l "github.com/ciju/gotunnel/log"
 	proto "github.com/ciju/gotunnel/protocol"
 	"github.com/ciju/gotunnel/rwtunnel"
+	"github.com/op/go-logging"
 )
+
+var l = logging.MustGetLogger("client")
 
 func ensureServer(addr string) bool {
 	lp, err := net.Dial("tcp", addr)
@@ -37,9 +40,10 @@ func setupHeartbeat(c net.Conn) {
 
 		_, err := c.Write([]byte("ping"))
 		if err != nil {
-			l.Log("Couldn't connect to server. Check your network connection, and run client again.")
+			l.Infof("Couldn't connect to server. Check your network connection, and run client again.")
 			os.Exit(1)
 		}
+		//l.Debugf("ping")
 	}
 }
 
@@ -47,30 +51,33 @@ func setupHeartbeat(c net.Conn) {
 // - send the requested subdomain to server.
 // - server replies back with a port to setup command channel on.
 // - it also replies with the server address that users can access the site on.
-func setupCommandChannel(addr, sub string, req, quit chan bool, conn, servInfo chan string) {
-	backproxy, err := net.Dial("tcp", addr)
+func setupCommandChannel(addr, sub string, req, quit chan bool, conn, serverInfo chan string) {
+	backProxy, err := net.Dial("tcp", addr)
 	if err != nil {
-		l.Log("CMD: Couldn't connect to ", addr, "err: ", err)
+		l.Infof("CMD: Couldn't connect to %s, err: %s", addr, err)
 		quit <- true
 		return
 	}
-	defer backproxy.Close()
+	defer backProxy.Close()
 
-	proto.SendSubRequest(backproxy, sub)
+	proto.SendSubRequest(backProxy, sub)
+	l.Infof("send sub domain %s to the remote server", sub)
 
 	// the port to connect on
-	serverat, conn_to, _ := proto.ReceiveProxyInfo(backproxy)
-	conn <- conn_to
-	servInfo <- serverat
+	servedAt, connTo, _ := proto.ReceiveProxyInfo(backProxy)
+	l.Infof("proxy info %s, conn to %s", servedAt, connTo)
 
-	go setupHeartbeat(backproxy)
+	conn <- connTo
+	serverInfo <- servedAt
+
+	go setupHeartbeat(backProxy)
 
 	for {
-		req <- proto.ReceiveConnRequest(backproxy)
+		req <- proto.ReceiveConnRequest(backProxy)
 	}
 }
 
-func SetupClient(port, remote, subdomain string, servInfo chan string) bool {
+func SetupClient(port, remote, subDomain string, serverInfo chan string) bool {
 	localServer := net.JoinHostPort("127.0.0.1", port)
 
 	// if !ensureServer(localServer) {
@@ -79,26 +86,28 @@ func SetupClient(port, remote, subdomain string, servInfo chan string) bool {
 
 	req, quit, conn := make(chan bool), make(chan bool), make(chan string)
 
-	// fmt.Printf("Setting Gotunnel server %s with local server on %s\n\n", remote, port)
+	// fmt.Printf("Setting go tunnel server %s with local server on %s\n\n", remote, port)
 
-	go setupCommandChannel(remote, subdomain, req, quit, conn, servInfo)
+	go setupCommandChannel(remote, subDomain, req, quit, conn, serverInfo)
 
 	remoteProxy := <-conn
 
-	// l.Log("remote proxy: %v", remoteProxy)
+	// l.Infof("remote proxy: %v", remoteProxy)
 
 	for {
 		select {
 		case <-req:
 			// fmt.Printf("New link b/w %s and %s\n", remoteProxy, localServer)
+			l.Infof("get req, then connect to remote proxy %s", remoteProxy)
 			rp, err := net.Dial("tcp", remoteProxy)
 			if err != nil {
-				l.Log("Coundn't connect to remote clientproxy", err)
+				l.Infof("Couldn't connect to remote client proxy: %s", err)
 				return false
 			}
+			l.Infof("then connect to local server %v", localServer)
 			lp, err := net.Dial("tcp", localServer)
 			if err != nil {
-				l.Log("Couldn't connect to localserver", err)
+				l.Infof("Couldn't connect to local server: %s", err)
 				return false
 			}
 

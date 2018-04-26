@@ -1,9 +1,11 @@
 package rwtunnel
 
 import (
-	l "github.com/ciju/gotunnel/log"
 	"io"
+	"github.com/op/go-logging"
 )
+
+var l = logging.MustGetLogger("tunnel")
 
 func copyFromTo(a, b io.ReadWriteCloser) {
 	defer func() {
@@ -37,7 +39,7 @@ func copypaste(in, out io.ReadWriteCloser, close_in bool, msg string) {
 
 	defer func() {
 		if close_in {
-			l.Log("eof closing connection")
+			l.Info("eof closing connection")
 			in.Close()
 			out.Close()
 		}
@@ -47,16 +49,16 @@ func copypaste(in, out io.ReadWriteCloser, close_in bool, msg string) {
 		n, err := in.Read(buf[0:])
 		// on readerror, only bail if no other choice.
 		if err == io.EOF {
-			l.Log("msg: ", msg)
+			l.Infof("msg: %v", msg)
 			// fmt.Print(msg)
 			// time.Sleep(1e9)
-			l.Log("eof", msg)
+			l.Infof("eof %v", msg)
 			return
 		}
-		l.Log("-- read ", n)
+		l.Infof("-- read %v", n)
 		if err != nil {
-			l.Log("something wrong while copying in ot out ", msg)
-			l.Log("error: ", err)
+			l.Infof("something wrong while copying in ot out : %v", msg)
+			l.Infof("error: %v", err)
 			return
 		}
 		// if n < 1 {
@@ -64,11 +66,11 @@ func copypaste(in, out io.ReadWriteCloser, close_in bool, msg string) {
 		// 	return
 		// }
 
-		l.Log("-- wrote msg bytes", n)
+		l.Infof("-- wrote msg bytes %v", n)
 
 		_, err = out.Write(buf[0:n])
 		if err != nil {
-			l.Log("something wrong while copying out to in ")
+			l.Info("something wrong while copying out to in ")
 			// l.Fatal("something wrong while copying out to in", err)
 			return
 		}

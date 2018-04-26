@@ -3,11 +3,11 @@ package simplehttpserver
 import (
 	"fmt"
 	"net/http"
+	"github.com/op/go-logging"
 )
 
-import (
-	l "github.com/ciju/gotunnel/log"
-)
+
+var l = logging.MustGetLogger("http server")
 
 func NewSimpleHTTPServer(port string, dir string) {
 
@@ -19,6 +19,6 @@ func NewSimpleHTTPServer(port string, dir string) {
 
 	fmt.Println("Serving", dir, "at port", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		l.Fatal("error", err)
+		l.Fatalf("error %v", err)
 	}
 }

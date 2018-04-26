@@ -1,7 +1,6 @@
 package tcprouter
 
 import (
-	l "github.com/ciju/gotunnel/log"
 	"github.com/ciju/gotunnel/rwtunnel"
 	"io"
 	"net"
@@ -44,19 +43,19 @@ func (p *ProxyClient) String() string {
 
 func (p *ProxyClient) Forward(c io.ReadWriteCloser) error {
 	bc := <-p.conn
-	l.Log("Received new connection. Fowarding.. ")
+	l.Info("Received new connection. Fowarding.. ")
 	rwtunnel.NewRWTunnel(c, bc)
 	return nil
 }
 
 func (p *ProxyClient) accept() {
 	for {
-		backconn, err := p.listenServer.Accept()
-		l.Log("New connection from backend ")
+		backConn, err := p.listenServer.Accept()
+		l.Info("New connection from backend ")
 		if err != nil {
-			l.Log("some problem %v", err)
+			l.Infof("some problem %v", err)
 		}
 
-		p.conn <- backconn
+		p.conn <- backConn
 	}
 }

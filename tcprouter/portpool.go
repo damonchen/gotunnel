@@ -5,10 +5,12 @@ import (
 )
 
 type PortPool struct {
-	Start         int
-	End           int
+	Start int
+	End   int
+	// 默认，池中的所有数据都是可用的
+	Pool map[int]struct{}
+
 	lastAllocated int
-	Pool          map[int]struct{}
 }
 
 type yes struct{}
@@ -24,6 +26,7 @@ func NewPortPool(start, end int) *PortPool {
 func (p *PortPool) inRange(port int) bool {
 	return p.Start <= port && port <= p.End
 }
+
 func (p *PortPool) IsAvailable(port int) bool {
 	if !p.inRange(port) {
 		return false
@@ -31,6 +34,7 @@ func (p *PortPool) IsAvailable(port int) bool {
 	_, ok := p.Pool[port]
 	return ok
 }
+
 func (p *PortPool) SetUnavailable(port int) {
 	if !p.inRange(port) {
 		return
@@ -38,13 +42,16 @@ func (p *PortPool) SetUnavailable(port int) {
 	delete(p.Pool, port)
 	p.lastAllocated = port
 }
+
 func (p *PortPool) SetAvailable(port int) {
 	if !p.inRange(port) {
 		return
 	}
 	p.Pool[port] = yes{}
 }
+
 func (p *PortPool) GetAvailable() (int, bool) {
+	//  从后往前搜，如果搜索到，则设置
 	for i := p.lastAllocated; i <= p.End; i++ {
 		if p.IsAvailable(i) {
 			p.SetUnavailable(i)
@@ -52,6 +59,7 @@ func (p *PortPool) GetAvailable() (int, bool) {
 		}
 	}
 
+	// 再从start到allocated开始搜索
 	for i := p.Start; i <= p.lastAllocated; i++ {
 		if p.IsAvailable(i) {
 			p.SetUnavailable(i)

@@ -3,11 +3,14 @@ package httpheadreader
 import (
 	"bufio"
 	"bytes"
-	l "github.com/ciju/gotunnel/log"
+	//l "github.com/ciju/gotunnel/log"
 	"net"
 	"net/http"
 	"regexp"
+	"github.com/op/go-logging"
 )
+
+var l = logging.MustGetLogger("http header reader")
 
 type HTTPHeadReader struct {
 	conn net.Conn
@@ -27,16 +30,16 @@ func (c *HTTPHeadReader) parseHeaders() (err error) {
 
 	n, err := c.conn.Read(buf[0:])
 	if err != nil {
-		l.Log("H: error while reading", err)
+		l.Infof("H: error while reading: %v", err)
 		return err
 	}
-	l.Log("H: bytes", n)
+	l.Infof("H: bytes: %d", n)
 	c.buf = make([]byte, n)
 	copy(c.buf, buf[0:n])
 
 	c.req, err = http.ReadRequest(bufio.NewReader(bytes.NewReader(c.buf[0:n])))
 	if err != nil {
-		l.Log("H: error while parsing header")
+		l.Infof("H: error while parsing header: %v", err)
 		return err
 	}
 	return nil
@@ -46,12 +49,12 @@ func (c *HTTPHeadReader) regexpHost() string {
 	// TODO: make this generic
 	reg, err := regexp.Compile(`(\w*\.localtunnel\.net)`)
 	if err != nil {
-		l.Log("H: couldn't find host")
+		l.Infof("H: couldn't find host")
 		return ""
 	}
 
 	if reg.Match(c.buf[0:]) {
-		l.Log("H: found host: ", reg.FindString(string(c.buf[0:])))
+		l.Infof("H: found host: %s", reg.FindString(string(c.buf[0:])))
 		return reg.FindString(string(c.buf[0:]))
 	}
 	return ""
@@ -64,7 +67,7 @@ func (c *HTTPHeadReader) Host() string {
 
 	err := c.parseHeaders()
 	if err != nil {
-		l.Log("H: error", err)
+		l.Infof("H: error:  %s", err)
 		return c.regexpHost()
 	}
 
@@ -79,7 +82,7 @@ func (c *HTTPHeadReader) Read(b []byte) (int, error) {
 	if len(c.buf) != 0 {
 		n := copy(b, c.buf)
 		c.buf = c.buf[n:]
-		l.Log("copied: %d - remaining %d ", n, len(c.buf))
+		l.Infof("copied: %d - remaining %d ", n, len(c.buf))
 		return n, nil
 	}
 	return c.conn.Read(b)
